@@ -114,15 +114,12 @@ final class NavigatorTransitionAnimator: NSObject, UIViewControllerAnimatedTrans
         } else {
             view.layer.maskedCorners = maskedCorners(for: configuration.direction)
         }
-        view.clipsToBounds = !configuration.shadowEnabled
-
-        if configuration.shadowEnabled {
-            view.layer.shadowColor = UIColor.black.cgColor
-            view.layer.shadowOpacity = 0.3
-            view.layer.shadowOffset = .zero
-            view.layer.shadowRadius = configuration.shadowRadius
-            view.layer.masksToBounds = false
-        }
+        
+        view.clipsToBounds = true
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.3
+        view.layer.shadowOffset = .zero
+        view.layer.shadowRadius = 8
     }
 
     /// Determines which corners to round based on the slide direction.

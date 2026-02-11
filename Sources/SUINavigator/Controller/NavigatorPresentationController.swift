@@ -10,7 +10,7 @@ final class NavigatorPresentationController: UIPresentationController {
     /// The dimming view behind the presented content.
     private lazy var dimmingView: UIView = {
         let view = UIView()
-        view.backgroundColor = configuration.backgroundOverlayColor.withAlphaComponent(configuration.backgroundOverlayOpacity)
+        view.backgroundColor = .black.withAlphaComponent(0.065)
         view.alpha = 0
 
         if configuration.backgroundTapDismissEnabled {
