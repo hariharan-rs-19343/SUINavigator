@@ -32,7 +32,7 @@ Add SUINavigator via **File → Add Package Dependencies…** in Xcode, or in yo
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/<your-org>/SUINavigator.git", from: "1.0.0")
+    .package(url: "https://github.com/hariharan-rs-19343/SUINavigator.git", from: "1.0.0")
 ]
 ```
 
