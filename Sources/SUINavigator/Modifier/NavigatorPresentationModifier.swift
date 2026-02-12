@@ -16,6 +16,7 @@ struct NavigatorPresentationModifier<Destination: View>: ViewModifier {
 
     @Binding var isPresented: Bool
     let configuration: NavigatorConfiguration
+    let onDismiss: (() -> Void)?
     let destination: () -> Destination
 
     @State private var hostingController: NavigatorHostingController<Destination>?
@@ -41,11 +42,10 @@ struct NavigatorPresentationModifier<Destination: View>: ViewModifier {
         let hc = NavigatorHostingController(rootView: destination())
         hc.configure(with: configuration)
 
-        // Detect dismissal via swipe / tap-on-background so the binding
-        // stays in sync.
+        // Only reset the binding here; @State cleanup happens
+        // in onChange → dismissContent() when isPresented becomes false.
         hc.onDismiss = { [self] in
             self.isPresented = false
-            self.hostingController = nil
         }
 
         presenter.present(hc, animated: true)
@@ -53,8 +53,10 @@ struct NavigatorPresentationModifier<Destination: View>: ViewModifier {
     }
 
     private func dismissContent() {
-        hostingController?.dismiss(animated: true) {
+        guard let hc = hostingController else { return }
+        hc.dismiss(animated: true) {
             hostingController = nil
+            onDismiss?()
         }
     }
 }
@@ -67,6 +69,7 @@ struct NavigatorItemModifier<Item: Identifiable, Destination: View>: ViewModifie
 
     @Binding var item: Item?
     let configuration: NavigatorConfiguration
+    let onDismiss: (() -> Void)?
     let destination: (Item) -> Destination
 
     @State private var hostingController: UIViewController?
@@ -85,6 +88,9 @@ struct NavigatorItemModifier<Item: Identifiable, Destination: View>: ViewModifie
                         presentItem()
                     }
                 } else if newID == nil {
+                    // Always clear presentedItemID here so the same item
+                    // can be re-presented after dismiss.
+                    presentedItemID = nil
                     dismissContent()
                 }
             }
@@ -96,10 +102,10 @@ struct NavigatorItemModifier<Item: Identifiable, Destination: View>: ViewModifie
         let hc = NavigatorHostingController(rootView: destination(currentItem))
         hc.configure(with: configuration)
 
+        // Only reset the binding here; @State cleanup (presentedItemID,
+        // hostingController) happens in onChange when item?.id becomes nil.
         hc.onDismiss = { [self] in
             self.item = nil
-            self.hostingController = nil
-            self.presentedItemID = nil
         }
 
         presenter.present(hc, animated: true)
@@ -115,6 +121,7 @@ struct NavigatorItemModifier<Item: Identifiable, Destination: View>: ViewModifie
         hc.dismiss(animated: true) {
             hostingController = nil
             presentedItemID = nil
+            onDismiss?()
             completion?()
         }
     }
@@ -158,12 +165,14 @@ public extension View {
     func znavigator<Destination: View>(
         isPresented: Binding<Bool>,
         configuration: NavigatorConfiguration = .default,
+        onDismiss: (() -> Void)? = nil,
         @ViewBuilder destination: @escaping () -> Destination
     ) -> some View {
         modifier(
             NavigatorPresentationModifier(
                 isPresented: isPresented,
                 configuration: configuration,
+                onDismiss: onDismiss,
                 destination: destination
             )
         )
@@ -191,12 +200,14 @@ public extension View {
     func znavigator<Item: Identifiable, Destination: View>(
         item: Binding<Item?>,
         configuration: NavigatorConfiguration = .default,
+        onDismiss: (() -> Void)? = nil,
         @ViewBuilder destination: @escaping (Item) -> Destination
     ) -> some View {
         modifier(
             NavigatorItemModifier(
                 item: item,
                 configuration: configuration,
+                onDismiss: onDismiss,
                 destination: destination
             )
         )
