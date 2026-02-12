@@ -42,10 +42,10 @@ struct NavigatorPresentationModifier<Destination: View>: ViewModifier {
         let hc = NavigatorHostingController(rootView: destination())
         hc.configure(with: configuration)
 
-        // Only reset the binding here; @State cleanup happens
-        // in onChange → dismissContent() when isPresented becomes false.
+        // Detect dismissal via swipe / tap-on-background so the binding stays in sync.
         hc.onDismiss = { [self] in
             self.isPresented = false
+            self.hostingController = nil
         }
 
         presenter.present(hc, animated: true)
@@ -53,8 +53,7 @@ struct NavigatorPresentationModifier<Destination: View>: ViewModifier {
     }
 
     private func dismissContent() {
-        guard let hc = hostingController else { return }
-        hc.dismiss(animated: true) {
+        hostingController?.dismiss(animated: true) {
             hostingController = nil
             onDismiss?()
         }
@@ -88,9 +87,6 @@ struct NavigatorItemModifier<Item: Identifiable, Destination: View>: ViewModifie
                         presentItem()
                     }
                 } else if newID == nil {
-                    // Always clear presentedItemID here so the same item
-                    // can be re-presented after dismiss.
-                    presentedItemID = nil
                     dismissContent()
                 }
             }
@@ -102,10 +98,10 @@ struct NavigatorItemModifier<Item: Identifiable, Destination: View>: ViewModifie
         let hc = NavigatorHostingController(rootView: destination(currentItem))
         hc.configure(with: configuration)
 
-        // Only reset the binding here; @State cleanup (presentedItemID,
-        // hostingController) happens in onChange when item?.id becomes nil.
         hc.onDismiss = { [self] in
             self.item = nil
+            self.hostingController = nil
+            self.presentedItemID = nil
         }
 
         presenter.present(hc, animated: true)
