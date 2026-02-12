@@ -46,7 +46,7 @@ public struct NavigatorConfiguration: Equatable {
         private var _cornerRadius: CGFloat = 0
         private var _backgroundTapDismissEnabled: Bool = true
         private var _animationDuration: TimeInterval = 0.35
-        private var _alignment: PresentationAlignment = .edge
+        private var _alignment: PresentationAlignment = .center
 
         public init() {}
 
