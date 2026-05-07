@@ -50,16 +50,17 @@ final class NavigatorTransitionAnimator: NSObject, UIViewControllerAnimatedTrans
 
         applyStyling(to: toView)
 
+        // Decelerate into the final position. A non-spring ease-out feels
+        // snappier and more predictable than a near-critically damped spring,
+        // which silently stretches the perceived duration past `duration`.
         let duration = transitionDuration(using: context)
         UIView.animate(
             withDuration: duration,
             delay: 0,
-            usingSpringWithDamping: 0.9,
-            initialSpringVelocity: 0.5,
-            options: .curveEaseInOut
+            options: [.curveEaseOut, .allowUserInteraction]
         ) {
             toView.frame = finalFrame
-        } completion: { finished in
+        } completion: { _ in
             context.completeTransition(!context.transitionWasCancelled)
         }
     }
@@ -77,14 +78,17 @@ final class NavigatorTransitionAnimator: NSObject, UIViewControllerAnimatedTrans
         var targetFrame = fromView.frame
         targetFrame.origin = offScreen
 
-        let duration = transitionDuration(using: context)
+        // Dismissal: accelerate off-screen (ease-in) and run a touch faster
+        // than the presentation. The view should feel "thrown out", not
+        // "eased out", which is what `.curveEaseInOut` was producing.
+        let duration = transitionDuration(using: context) * 0.85
         UIView.animate(
             withDuration: duration,
             delay: 0,
-            options: .curveEaseInOut
+            options: [.curveEaseIn, .beginFromCurrentState, .allowUserInteraction]
         ) {
             fromView.frame = targetFrame
-        } completion: { finished in
+        } completion: { _ in
             context.completeTransition(!context.transitionWasCancelled)
         }
     }

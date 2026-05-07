@@ -45,7 +45,7 @@ public struct NavigatorConfiguration: Equatable {
         private var _size: PresentationSize = .fullScreen
         private var _cornerRadius: CGFloat = 0
         private var _backgroundTapDismissEnabled: Bool = true
-        private var _animationDuration: TimeInterval = 0.35
+        private var _animationDuration: TimeInterval = 0.30
         private var _alignment: PresentationAlignment = .center
 
         public init() {}
