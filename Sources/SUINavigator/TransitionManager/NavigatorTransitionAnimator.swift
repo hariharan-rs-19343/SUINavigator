@@ -43,24 +43,29 @@ final class NavigatorTransitionAnimator: NSObject, UIViewControllerAnimatedTrans
         let containerView = context.containerView
         let finalFrame = context.finalFrame(for: toVC)
 
-        // Start off-screen
+        // Position the view at its final frame and translate it off-screen
+        // via `transform`. Animating `transform` is GPU-composited and does
+        // NOT invalidate layout — meaningfully smoother than animating
+        // `frame`, which forces UIHostingController/SwiftUI through a
+        // layout pass on every animation tick.
         toView.frame = finalFrame
-        toView.frame.origin = offScreenOrigin(for: finalFrame, in: containerView.bounds)
+        applyStyling(to: toView)
+        toView.transform = offScreenTransform(for: finalFrame, in: containerView.bounds)
         containerView.addSubview(toView)
 
-        applyStyling(to: toView)
+        // Force SwiftUI's first layout pass to happen NOW, while the view
+        // is still off-screen. Without this you can see content "pop in"
+        // mid-slide because SwiftUI's hosting view is still resolving its
+        // body during the first few animation frames.
+        toView.layoutIfNeeded()
 
-        // Decelerate into the final position. A non-spring ease-out feels
-        // snappier and more predictable than a near-critically damped spring,
-        // which silently stretches the perceived duration past `duration`.
+        // Spring physics; tunable per-configuration via `springDamping`
+        // / `springVelocity`. Default damping of 1.0 is critically damped
+        // (no overshoot, no perceived duration stretch).
         let duration = transitionDuration(using: context)
-        UIView.animate(
-            withDuration: duration,
-            delay: 0,
-            options: [.curveEaseOut, .allowUserInteraction]
-        ) {
-            toView.frame = finalFrame
-        } completion: { _ in
+        animateWithSpring(duration: duration, animations: {
+            toView.transform = .identity
+        }) { _ in
             context.completeTransition(!context.transitionWasCancelled)
         }
     }
@@ -74,38 +79,55 @@ final class NavigatorTransitionAnimator: NSObject, UIViewControllerAnimatedTrans
         }
 
         let containerView = context.containerView
-        let offScreen = offScreenOrigin(for: fromView.frame, in: containerView.bounds)
-        var targetFrame = fromView.frame
-        targetFrame.origin = offScreen
+        let targetTransform = offScreenTransform(
+            for: fromView.frame, in: containerView.bounds
+        )
 
-        // Dismissal: accelerate off-screen (ease-in) and run a touch faster
-        // than the presentation. The view should feel "thrown out", not
-        // "eased out", which is what `.curveEaseInOut` was producing.
+        // Dismissal runs a touch faster than the presentation so the view
+        // feels "thrown out" rather than "eased out". Spring values come
+        // from the same configuration knobs used on present.
         let duration = transitionDuration(using: context) * 0.85
-        UIView.animate(
-            withDuration: duration,
-            delay: 0,
-            options: [.curveEaseIn, .beginFromCurrentState, .allowUserInteraction]
-        ) {
-            fromView.frame = targetFrame
-        } completion: { _ in
+        animateWithSpring(duration: duration, animations: {
+            fromView.transform = targetTransform
+        }) { _ in
             context.completeTransition(!context.transitionWasCancelled)
         }
     }
 
     // MARK: - Helpers
 
-    /// Returns the origin that places the view off-screen in the configured direction.
-    private func offScreenOrigin(for frame: CGRect, in containerBounds: CGRect) -> CGPoint {
+    /// Spring-driven `UIView.animate` wrapper used by both presentation
+    /// and dismissal. `.curveLinear` is intentional — when a spring is
+    /// supplied UIKit derives the timing curve from physics and ignores
+    /// the option, so passing `.curveLinear` makes the intent explicit.
+    private func animateWithSpring(
+        duration: TimeInterval,
+        animations: @escaping () -> Void,
+        completion: ((Bool) -> Void)? = nil
+    ) {
+        UIView.animate(
+            withDuration: duration,
+            delay: 0,
+            usingSpringWithDamping: configuration.springDamping,
+            initialSpringVelocity: configuration.springVelocity,
+            options: [.beginFromCurrentState, .curveLinear, .allowUserInteraction],
+            animations: animations,
+            completion: completion
+        )
+    }
+
+    /// Returns the affine translation that moves a view sitting at `frame`
+    /// fully off-screen in the configured direction.
+    private func offScreenTransform(for frame: CGRect, in containerBounds: CGRect) -> CGAffineTransform {
         switch configuration.direction {
         case .left:
-            return CGPoint(x: -frame.width, y: frame.origin.y)
+            return CGAffineTransform(translationX: -frame.maxX, y: 0)
         case .right:
-            return CGPoint(x: containerBounds.width, y: frame.origin.y)
+            return CGAffineTransform(translationX: containerBounds.width - frame.minX, y: 0)
         case .top:
-            return CGPoint(x: frame.origin.x, y: -frame.height)
+            return CGAffineTransform(translationX: 0, y: -frame.maxY)
         case .bottom:
-            return CGPoint(x: frame.origin.x, y: containerBounds.height)
+            return CGAffineTransform(translationX: 0, y: containerBounds.height - frame.minY)
         }
     }
 

@@ -33,6 +33,12 @@ public final class Navigator: ObservableObject {
     /// Weak reference to the currently presented hosting controller.
     private weak var presentedHostingController: UIViewController?
 
+    // MARK: - Init
+
+    /// Creates a new navigator. Inject it as an `@EnvironmentObject` to make
+    /// the imperative `present(...)` / `dismiss()` API available app-wide.
+    public init() {}
+
     // MARK: - Present
 
     /// Presents a SwiftUI view using UIKit's custom modal presentation.

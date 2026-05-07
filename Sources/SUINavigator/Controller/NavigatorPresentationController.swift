@@ -7,10 +7,13 @@ final class NavigatorPresentationController: UIPresentationController {
     // MARK: - Properties
     let configuration: NavigatorConfiguration
 
-    /// The dimming view behind the presented content.
+    /// The dimming view behind the presented content. The view's `alpha`
+    /// is animated 0 → `configuration.backgroundOverlayOpacity` during
+    /// presentation, so the background color is set fully opaque and
+    /// alpha controls the final intensity.
     private lazy var dimmingView: UIView = {
         let view = UIView()
-        view.backgroundColor = .black.withAlphaComponent(0.065)
+        view.backgroundColor = configuration.backgroundOverlayColor
         view.alpha = 0
 
         if configuration.backgroundTapDismissEnabled {
@@ -89,13 +92,14 @@ final class NavigatorPresentationController: UIPresentationController {
         dimmingView.frame = containerView.bounds
         containerView.insertSubview(dimmingView, at: 0)
 
+        let targetAlpha = configuration.backgroundOverlayOpacity
         guard let coordinator = presentedViewController.transitionCoordinator else {
-            dimmingView.alpha = 1
+            dimmingView.alpha = targetAlpha
             return
         }
 
         coordinator.animate(alongsideTransition: { _ in
-            self.dimmingView.alpha = 1
+            self.dimmingView.alpha = targetAlpha
         })
     }
 
@@ -119,7 +123,15 @@ final class NavigatorPresentationController: UIPresentationController {
     override func containerViewWillLayoutSubviews() {
         super.containerViewWillLayoutSubviews()
         dimmingView.frame = containerView?.bounds ?? .zero
-        presentedView?.frame = frameOfPresentedViewInContainerView
+
+        // Do not fight an in-flight transform animation. Setting `frame`
+        // while `transform` is non-identity is undefined per Apple's docs
+        // and would cause the slide animation to jump. Once the animator
+        // restores `transform = .identity` it's safe to update the frame
+        // again (e.g. on rotation).
+        if let presentedView, presentedView.transform.isIdentity {
+            presentedView.frame = frameOfPresentedViewInContainerView
+        }
     }
 
     // MARK: - Actions
