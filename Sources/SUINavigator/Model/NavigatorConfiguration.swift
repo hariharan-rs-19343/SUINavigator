@@ -78,7 +78,7 @@ public struct NavigatorConfiguration: Equatable {
     public class Builder {
         private var _direction: PresentationDirection = .bottom
         private var _size: PresentationSize = .fullScreen
-        private var _cornerRadius: CGFloat = 0
+        private var _cornerRadius: CGFloat = 16
         private var _backgroundTapDismissEnabled: Bool = true
         private var _animationDuration: TimeInterval = 0.30
         private var _alignment: PresentationAlignment = .center
