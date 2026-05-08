@@ -42,7 +42,7 @@ struct ContentView: View {
             .navigationTitle("SUINavigator")
             .navigationBarTitleDisplayMode(.large)
             // MARK: - Preset presentations
-            .znavigator(isPresented: $showBottomSheet, configuration: .bottomSheet) {
+            .znavigator(isPresented: $showBottomSheet, configuration: .sheet) {
                 DemoSheet(title: "Bottom Sheet",
                           subtitle: "Half-height sheet sliding up from the bottom.",
                           accent: .blue)
@@ -311,7 +311,14 @@ private struct ImperativeDemoSheet: View {
     }
 }
 
-#Preview {
+#Preview(traits: .landscapeLeft, .fixedLayout(width: 1800, height: 1169)) {
+    let coordinator = AppCoordinator()
+    return ContentView()
+        .environmentObject(coordinator)
+        .environmentObject(coordinator.navigator)
+}
+
+#Preview(traits: .landscapeLeft, .fixedLayout(width: 1024, height: 665)) {
     let coordinator = AppCoordinator()
     return ContentView()
         .environmentObject(coordinator)

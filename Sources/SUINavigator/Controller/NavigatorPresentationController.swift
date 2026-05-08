@@ -142,21 +142,12 @@ final class NavigatorPresentationController: UIPresentationController {
 
     // MARK: - Size Resolution
 
-    private func resolveDimension(_ dimension: PresentationSize.Dimension, in available: CGFloat) -> CGFloat {
-        switch dimension {
-        case .fixed(let value):
-            return min(value, available)
-        case .fraction(let ratio):
-            return available * max(0, min(ratio, 1))
-        case .full:
-            return available
-        }
-    }
-
+    /// Defers per-axis math to `PresentationSize.Dimension.resolve(in:)`,
+    /// which honors any `max` / `min` clamps configured on the dimension.
     private func resolveSize(_ size: PresentationSize, in container: CGSize) -> CGSize {
         CGSize(
-            width: resolveDimension(size.width, in: container.width),
-            height: resolveDimension(size.height, in: container.height)
+            width: size.width.resolve(in: container.width),
+            height: size.height.resolve(in: container.height)
         )
     }
 }

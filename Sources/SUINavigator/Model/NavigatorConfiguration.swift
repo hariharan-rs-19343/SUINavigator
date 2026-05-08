@@ -194,7 +194,75 @@ extension NavigatorConfiguration {
     /// A full-screen presentation sliding from the bottom.
     public static let `default` = NavigatorConfiguration.builder().build()
 
-    /// A half-sheet sliding up from the bottom with rounded corners.
+    /// A half-height bottom sheet — the SUINavigator equivalent of
+    /// UIKit's modern modal-sheet style.
+    ///
+    /// Slides up from the bottom edge using ``PresentationSize/halfSheet``
+    /// (full container width capped at 720 pt × 50 % height) with 16-pt
+    /// rounded top corners. Tap-to-dismiss on the dimmed overlay is
+    /// enabled.
+    ///
+    /// Use this for **compact, contextual** content: pickers, brief
+    /// details, confirmations, action lists. For taller content —
+    /// settings, multi-page forms, substantial UIs — prefer ``sheet``.
+    ///
+    /// ## Usage
+    ///
+    /// Declarative — flip a `Bool` binding:
+    ///
+    /// ```swift
+    /// struct ContentView: View {
+    ///     @State private var showFilters = false
+    ///
+    ///     var body: some View {
+    ///         Button("Filters") { showFilters = true }
+    ///             .znavigator(isPresented: $showFilters,
+    ///                         configuration: .bottomSheet) {
+    ///                 FiltersView()
+    ///             }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// Imperative — through a `Navigator` injected as an
+    /// `@EnvironmentObject`:
+    ///
+    /// ```swift
+    /// navigator.present(configuration: .bottomSheet) {
+    ///     FiltersView()
+    /// }
+    /// ```
+    ///
+    /// ## Anatomy
+    ///
+    /// | Property | Value |
+    /// |---|---|
+    /// | Direction | `.bottom` |
+    /// | Size | ``PresentationSize/halfSheet`` (full × 50 %, width ≤ 720 pt) |
+    /// | Corner radius | 16 pt (rounded top corners) |
+    /// | Alignment | `.center` (builder default) |
+    /// | Animation duration | 0.30 s |
+    /// | Spring | damping `1.0`, velocity `0.0` (snappy, no overshoot) |
+    /// | Background overlay | `.black` at 40 % opacity |
+    /// | Tap-to-dismiss | enabled |
+    ///
+    /// ## Customization
+    ///
+    /// Start from the preset and tweak via the builder:
+    ///
+    /// ```swift
+    /// let bouncySheet = NavigatorConfiguration.builder()
+    ///     .direction(.bottom)
+    ///     .size(.halfSheet)
+    ///     .cornerRadius(20)               // a bit more rounding
+    ///     .springDamping(0.85)            // tiny bounce on landing
+    ///     .springVelocity(0.4)
+    ///     .backgroundOverlayOpacity(0.5)  // slightly heavier dim
+    ///     .build()
+    /// ```
+    ///
+    /// - SeeAlso: ``sheet`` (taller variant), ``PresentationSize/halfSheet``,
+    ///   ``builder()``
     public static let bottomSheet = NavigatorConfiguration.builder()
         .direction(.bottom)
         .size(.halfSheet)
@@ -226,6 +294,83 @@ extension NavigatorConfiguration {
         .direction(.bottom)
         .size(.card)
         .alignment(.center)
+        .cornerRadius(20)
+        .build()
+    
+    /// A tall bottom sheet — wider, taller, and more "substantial" than
+    /// ``bottomSheet``.
+    ///
+    /// Slides up from the bottom edge using ``PresentationSize/sheet``
+    /// (fixed 860-pt width clamped to the container × 76 % height capped
+    /// at 960 pt) with 20-pt rounded top corners. Tap-to-dismiss is
+    /// enabled.
+    ///
+    /// Use this when the modal needs significant vertical room —
+    /// **settings, multi-page forms, content viewers** — and should look
+    /// natural across phones *and* large windows without ever spanning
+    /// the entire window on iPad / Mac Catalyst.
+    ///
+    /// ## Usage
+    ///
+    /// Declarative — flip a `Bool` binding:
+    ///
+    /// ```swift
+    /// struct AccountView: View {
+    ///     @State private var showSettings = false
+    ///
+    ///     var body: some View {
+    ///         Button("Settings") { showSettings = true }
+    ///             .znavigator(isPresented: $showSettings,
+    ///                         configuration: .sheet) {
+    ///                 SettingsView()
+    ///             }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// Item-driven — present from a binding to an `Identifiable?`:
+    ///
+    /// ```swift
+    /// .znavigator(item: $editingProduct, configuration: .sheet) { product in
+    ///     ProductEditor(product: product)
+    /// }
+    /// ```
+    ///
+    /// Imperative — through a `Navigator`:
+    ///
+    /// ```swift
+    /// navigator.present(configuration: .sheet) {
+    ///     SettingsView()
+    /// }
+    /// ```
+    ///
+    /// ## Anatomy
+    ///
+    /// | Property | Value |
+    /// |---|---|
+    /// | Direction | `.bottom` |
+    /// | Size | ``PresentationSize/sheet`` (fixed 860 × 76 %, height ≤ 960 pt) |
+    /// | Corner radius | 20 pt (rounded top corners) |
+    /// | Alignment | `.center` (builder default) |
+    /// | Animation duration | 0.30 s |
+    /// | Spring | damping `1.0`, velocity `0.0` |
+    /// | Background overlay | `.black` at 40 % opacity |
+    /// | Tap-to-dismiss | enabled |
+    ///
+    /// ## When to use which
+    ///
+    /// | Need | Use |
+    /// |---|---|
+    /// | Compact picker / detail (≤ 50 % height) | ``bottomSheet`` |
+    /// | Substantial form / settings (~ 75 % height) | ``sheet`` |
+    /// | Centered modal with no edge attachment | ``centerCard`` |
+    /// | Full-screen takeover | ``default`` |
+    ///
+    /// - SeeAlso: ``bottomSheet``, ``PresentationSize/sheet``,
+    ///   ``builder()``
+    public static let sheet = NavigatorConfiguration.builder()
+        .direction(.bottom)
+        .size(.sheet)
         .cornerRadius(20)
         .build()
 }

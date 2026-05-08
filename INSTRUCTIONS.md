@@ -99,8 +99,20 @@ SUINavigator/
   - `PresentationAlignment`: `.edge | .center`
   - `PresentationSize`
     - `width: Dimension`, `height: Dimension`
-    - `Dimension`: `.fixed(CGFloat) | .fraction(CGFloat) | .full`
-    - Presets: `.fullScreen`, `.halfSheet`, `.sidePanel`, `.card`
+    - `Dimension` is a **struct** (not an enum) with static factories
+      and fluent constraints:
+      - `.fixed(CGFloat)`
+      - `.fraction(CGFloat, max: CGFloat? = nil)`
+      - `.full` / `.full(max: CGFloat)`
+      - `.max(CGFloat)` / `.min(CGFloat)` — fluent constraints chainable
+        on any of the above (e.g. `.fraction(0.8).max(720)`).
+      - Internal `resolve(in:)` honors `min/max` and clamps to the
+        available container extent. Never exceeds what's available.
+    - Presets:
+      - `.fullScreen` — `.full × .full`
+      - `.halfSheet` — `.full(max: 720) × .fraction(0.5)`
+      - `.sidePanel` — `.fraction(0.4, max: 480) × .full`
+      - `.card` — `.fraction(0.8, max: 720) × .fraction(0.6, max: 920)`
 
 ### 3.2 View modifiers (in `NavigatorPresentationModifier.swift`)
 
@@ -179,10 +191,17 @@ performs steps 3–5 directly. `Navigator.dismiss()` calls
 
 ## 6. Frame Calculation – `NavigatorPresentationController`
 
-- Resolves `PresentationSize.Dimension`:
-  - `.fixed(v)` → `min(v, available)`
+- Per-axis resolution lives on `PresentationSize.Dimension.resolve(in:)`
+  (in `PresentationModels.swift`). The presentation controller just calls
+  `size.width.resolve(in: container.width)` / `size.height.resolve(in: container.height)`.
+- Resolution rules:
+  - `.fixed(v)` → `v`
   - `.fraction(r)` → `available * clamp(r, 0...1)`
   - `.full` → `available`
+  - Any `.max(cap)` then clamps the above with `min(result, cap)`.
+  - Any `.min(floor)` then raises the result with `max(result, floor)`.
+  - Final result is always `min(result, available)` — a `.min(800)` on a
+    400 pt container still resolves to 400.
 - `alignment == .center` → centered rect in container.
 - `alignment == .edge` → pinned to the slide edge (centered on the cross axis).
 - `containerViewWillLayoutSubviews` re-applies the dimming view's frame on
@@ -296,8 +315,8 @@ README at the same time.
 (`import Testing`). There is **no real test coverage yet**. Adding tests for:
 
 - `NavigatorConfiguration.Builder` defaults / fluent chaining
-- `PresentationSize.Dimension` resolution (use a pure helper extracted from
-  `NavigatorPresentationController.resolveSize` if you want to test it)
+- `PresentationSize.Dimension.resolve(in:)` — pure function, easy to
+  unit-test (fixed / fraction / full / max / min / clamping to container).
 - `NavigatorTransitionAnimator.offScreenOrigin` per direction
 
 would be a high-value, low-risk first PR.
