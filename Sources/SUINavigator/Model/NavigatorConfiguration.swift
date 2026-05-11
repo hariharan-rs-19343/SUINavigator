@@ -84,8 +84,11 @@ public struct NavigatorConfiguration: Equatable {
         private var _alignment: PresentationAlignment = .center
         private var _springDamping: CGFloat = 1.0
         private var _springVelocity: CGFloat = 0.0
-        private var _backgroundOverlayColor: UIColor = .black
-        private var _backgroundOverlayOpacity: CGFloat = 0.18
+        private var _backgroundOverlayColor: UIColor = UIColor(red: 164.0 / 255.0,
+                                                                green: 164.0 / 255.0,
+                                                                blue: 164.0 / 255.0,
+                                                                alpha: 1.0)
+        private var _backgroundOverlayOpacity: CGFloat = 0.5
 
         public init() {}
 
@@ -154,14 +157,14 @@ public struct NavigatorConfiguration: Equatable {
             return self
         }
 
-        /// Sets the dimming overlay color. Default is `.black`.
+        /// Sets the dimming overlay color. Default is `#A4A4A4`.
         @discardableResult
         public func backgroundOverlayColor(_ value: UIColor) -> Builder {
             _backgroundOverlayColor = value
             return self
         }
 
-        /// Sets the dimming overlay opacity (`0.0...1.0`). Default is `0.40`.
+        /// Sets the dimming overlay opacity (`0.0...1.0`). Default is `0.50`.
         @discardableResult
         public func backgroundOverlayOpacity(_ value: CGFloat) -> Builder {
             _backgroundOverlayOpacity = value
@@ -243,7 +246,7 @@ extension NavigatorConfiguration {
     /// | Alignment | `.center` (builder default) |
     /// | Animation duration | 0.30 s |
     /// | Spring | damping `1.0`, velocity `0.0` (snappy, no overshoot) |
-    /// | Background overlay | `.black` at 40 % opacity |
+    /// | Background overlay | `#A4A4A4` at 50 % opacity |
     /// | Tap-to-dismiss | enabled |
     ///
     /// ## Customization
@@ -354,7 +357,7 @@ extension NavigatorConfiguration {
     /// | Alignment | `.center` (builder default) |
     /// | Animation duration | 0.30 s |
     /// | Spring | damping `1.0`, velocity `0.0` |
-    /// | Background overlay | `.black` at 40 % opacity |
+    /// | Background overlay | `#A4A4A4` at 50 % opacity |
     /// | Tap-to-dismiss | enabled |
     ///
     /// ## When to use which
