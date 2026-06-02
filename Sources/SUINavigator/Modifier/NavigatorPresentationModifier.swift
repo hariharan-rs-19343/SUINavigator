@@ -26,6 +26,9 @@ struct NavigatorPresentationModifier<Destination: View>: ViewModifier {
         content
             .background(ViewControllerResolver(onResolve: { vc in
                 presenterVC = vc
+                if isPresented && hostingController == nil {
+                    presentContent(from: vc)
+                }
             }))
             .onChange(of: isPresented) { _, newValue in
                 if newValue {
@@ -36,13 +39,12 @@ struct NavigatorPresentationModifier<Destination: View>: ViewModifier {
             }
     }
 
-    private func presentContent() {
-        guard let presenter = presenterVC else { return }
+    private func presentContent(from explicitPresenter: UIViewController? = nil) {
+        guard let presenter = explicitPresenter ?? presenterVC else { return }
 
         let hc = NavigatorHostingController(rootView: destination())
         hc.configure(with: configuration)
 
-        // Detect dismissal via swipe / tap-on-background so the binding stays in sync.
         hc.onDismiss = { [self] in
             self.isPresented = false
             self.hostingController = nil
@@ -79,10 +81,12 @@ struct NavigatorItemModifier<Item: Identifiable, Destination: View>: ViewModifie
         content
             .background(ViewControllerResolver(onResolve: { vc in
                 presenterVC = vc
+                if item != nil && hostingController == nil {
+                    presentItem(from: vc)
+                }
             }))
             .onChange(of: item?.id) { _, newID in
                 if let newID = newID, newID != presentedItemID {
-                    // Dismiss any existing presentation first, then present new item.
                     dismissContent {
                         presentItem()
                     }
@@ -92,8 +96,9 @@ struct NavigatorItemModifier<Item: Identifiable, Destination: View>: ViewModifie
             }
     }
 
-    private func presentItem() {
-        guard let presenter = presenterVC, let currentItem = item else { return }
+    private func presentItem(from explicitPresenter: UIViewController? = nil) {
+        guard let presenter = explicitPresenter ?? presenterVC,
+              let currentItem = item else { return }
 
         let hc = NavigatorHostingController(rootView: destination(currentItem))
         hc.configure(with: configuration)
