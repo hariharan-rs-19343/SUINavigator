@@ -34,8 +34,5 @@ final class NavigatorHostingController<Content: View>: UIHostingController<Conte
         self.navigatorTransitioningDelegate = delegate
         self.transitioningDelegate = delegate
         self.modalPresentationStyle = .custom
-
-        // Transparent background so the presentation controller's dimming and frame are visible.
-        view.backgroundColor = .clear
     }
 }
