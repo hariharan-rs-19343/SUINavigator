@@ -84,11 +84,10 @@ public struct NavigatorConfiguration: Equatable {
         private var _alignment: PresentationAlignment = .center
         private var _springDamping: CGFloat = 1.0
         private var _springVelocity: CGFloat = 0.0
-        private var _backgroundOverlayColor: UIColor = UIColor(red: 164.0 / 255.0,
-                                                                green: 164.0 / 255.0,
-                                                                blue: 164.0 / 255.0,
-                                                                alpha: 1.0)
-        private var _backgroundOverlayOpacity: CGFloat = 0.5
+        private var _backgroundOverlayColor: UIColor = UIColor.setColor(dark: UIColor(
+            red: 48.0 / 255.0, green: 48.0 / 255.0, blue: 48.0 / 255.0, alpha: 0.5), light: UIColor(
+            red: 196.0 / 255.0, green: 196.0 / 255.0, blue: 196.0 / 255.0, alpha: 0.5))
+        private var _backgroundOverlayOpacity: CGFloat = 1.0
 
         public init() {}
 
@@ -376,4 +375,32 @@ extension NavigatorConfiguration {
         .size(.sheet)
         .cornerRadius(20)
         .build()
+}
+
+internal extension UIColor {
+    /// Returns a UIColor that adapts based on the current user interface style (light/dark mode).
+    ///
+    /// - Parameters:
+    ///   - dark: The color to be used in dark mode.
+    ///   - light: The color to be used in light mode.
+    /// - Returns: A UIColor that switches between dark and light colors based on the current interface style.
+    private static func setAppearance(dark: UIColor, light: UIColor) -> UIColor {
+        return UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? dark : light
+        }
+    }
+    
+    /// A convenience method that calls `setAppearance(dark:light:)` to apply dark and light colors.
+    ///
+    /// - Parameters:
+    ///   - dark: The color to be used in dark mode.
+    ///   - light: The color to be used in light mode.
+    /// - Returns: A UIColor that adapts to dark/light mode.
+    static func setColor(dark: UIColor, light: UIColor) -> UIColor {
+        return setAppearance(dark: dark, light: light)
+    }
+    
+    static var shadowColor: UIColor {
+        return .setColor(dark: UIColor(red: 21.0 / 255.0, green: 21.0 / 255.0, blue: 21.0 / 255.0, alpha: 0.5), light: UIColor(red: 172.0 / 255.0, green: 172.0 / 255.0, blue: 172.0 / 255.0, alpha: 0.5))
+    }
 }

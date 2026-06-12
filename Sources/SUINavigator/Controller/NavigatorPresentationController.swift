@@ -116,6 +116,7 @@ final class NavigatorPresentationController: UIPresentationController {
 
     override func dismissalTransitionDidEnd(_ completed: Bool) {
         if completed {
+            containerView?.viewWithTag(NavigatorTransitionAnimator.shadowWrapperTag)?.removeFromSuperview()
             dimmingView.removeFromSuperview()
         }
     }
@@ -129,7 +130,14 @@ final class NavigatorPresentationController: UIPresentationController {
         // and would cause the slide animation to jump. Once the animator
         // restores `transform = .identity` it's safe to update the frame
         // again (e.g. on rotation).
-        if let presentedView, presentedView.transform.isIdentity {
+        guard let presentedView else { return }
+
+        let shadowWrapper = containerView?.viewWithTag(NavigatorTransitionAnimator.shadowWrapperTag)
+
+        if let shadowWrapper, shadowWrapper.transform.isIdentity {
+            shadowWrapper.frame = frameOfPresentedViewInContainerView
+            presentedView.frame = shadowWrapper.bounds
+        } else if presentedView.transform.isIdentity {
             presentedView.frame = frameOfPresentedViewInContainerView
         }
     }

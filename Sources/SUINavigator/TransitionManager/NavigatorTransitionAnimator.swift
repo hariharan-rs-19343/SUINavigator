@@ -4,6 +4,10 @@ import UIKit
 /// in/out from the configured direction.
 final class NavigatorTransitionAnimator: NSObject, UIViewControllerAnimatedTransitioning {
 
+    // MARK: - Constants
+
+    static let shadowWrapperTag = 78_421
+
     // MARK: - Properties
 
     let configuration: NavigatorConfiguration
@@ -43,28 +47,26 @@ final class NavigatorTransitionAnimator: NSObject, UIViewControllerAnimatedTrans
         let containerView = context.containerView
         let finalFrame = context.finalFrame(for: toVC)
 
-        // Position the view at its final frame and translate it off-screen
-        // via `transform`. Animating `transform` is GPU-composited and does
-        // NOT invalidate layout — meaningfully smoother than animating
-        // `frame`, which forces UIHostingController/SwiftUI through a
-        // layout pass on every animation tick.
-        toView.frame = finalFrame
-        applyStyling(to: toView)
-        toView.transform = offScreenTransform(for: finalFrame, in: containerView.bounds)
-        containerView.addSubview(toView)
+        let shadowWrapper = ShadowWrapperView(frame: finalFrame)
+        shadowWrapper.tag = Self.shadowWrapperTag
+        configureShadowWrapper(shadowWrapper)
+
+        toView.frame = shadowWrapper.bounds
+        applyContentStyling(to: toView)
+        shadowWrapper.addSubview(toView)
+
+        shadowWrapper.transform = offScreenTransform(for: finalFrame, in: containerView.bounds)
+        containerView.addSubview(shadowWrapper)
 
         // Force SwiftUI's first layout pass to happen NOW, while the view
         // is still off-screen. Without this you can see content "pop in"
         // mid-slide because SwiftUI's hosting view is still resolving its
         // body during the first few animation frames.
-        toView.layoutIfNeeded()
+        shadowWrapper.layoutIfNeeded()
 
-        // Spring physics; tunable per-configuration via `springDamping`
-        // / `springVelocity`. Default damping of 1.0 is critically damped
-        // (no overshoot, no perceived duration stretch).
         let duration = transitionDuration(using: context)
         animateWithSpring(duration: duration, animations: {
-            toView.transform = .identity
+            shadowWrapper.transform = .identity
         }) { _ in
             context.completeTransition(!context.transitionWasCancelled)
         }
@@ -78,17 +80,18 @@ final class NavigatorTransitionAnimator: NSObject, UIViewControllerAnimatedTrans
             return
         }
 
+        let wrapper = fromView.superview?.tag == Self.shadowWrapperTag
+            ? fromView.superview!
+            : fromView
+
         let containerView = context.containerView
         let targetTransform = offScreenTransform(
-            for: fromView.frame, in: containerView.bounds
+            for: wrapper.frame, in: containerView.bounds
         )
 
-        // Dismissal runs a touch faster than the presentation so the view
-        // feels "thrown out" rather than "eased out". Spring values come
-        // from the same configuration knobs used on present.
         let duration = transitionDuration(using: context) * 0.85
         animateWithSpring(duration: duration, animations: {
-            fromView.transform = targetTransform
+            wrapper.transform = targetTransform
         }) { _ in
             context.completeTransition(!context.transitionWasCancelled)
         }
@@ -131,21 +134,43 @@ final class NavigatorTransitionAnimator: NSObject, UIViewControllerAnimatedTrans
         }
     }
 
-    /// Applies corner radius and shadow from the configuration.
-    private func applyStyling(to view: UIView) {
+    // MARK: - Styling
+
+    /// Configures the shadow wrapper with shadow properties and adaptive border.
+    private func configureShadowWrapper(_ wrapper: ShadowWrapperView) {
+        wrapper.backgroundColor = .clear
+        wrapper.clipsToBounds = false
+
+        let corners = resolvedMaskedCorners()
+        wrapper.layer.cornerRadius = configuration.cornerRadius
+        wrapper.layer.maskedCorners = corners
+
+        wrapper.layer.shadowColor = UIColor.shadowColor.cgColor
+        wrapper.layer.shadowOpacity = 0.2
+        wrapper.layer.shadowOffset = .zero
+        wrapper.layer.shadowRadius = 4
+        wrapper.layer.shadowPath = UIBezierPath(
+            roundedRect: wrapper.bounds,
+            cornerRadius: configuration.cornerRadius
+        ).cgPath
+
+        wrapper.layer.borderWidth = 1.0
+        wrapper.updateBorderColor()
+    }
+
+    /// Applies corner radius and clipping to the content view (presented view).
+    private func applyContentStyling(to view: UIView) {
         view.layer.cornerRadius = configuration.cornerRadius
-        // Center alignment rounds all corners; edge alignment rounds only the inner corners.
-        if configuration.alignment == .center {
-            view.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-        } else {
-            view.layer.maskedCorners = maskedCorners(for: configuration.direction)
-        }
-        
+        view.layer.maskedCorners = resolvedMaskedCorners()
         view.clipsToBounds = true
-        view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOpacity = 0.3
-        view.layer.shadowOffset = .zero
-        view.layer.shadowRadius = 8
+    }
+
+    private func resolvedMaskedCorners() -> CACornerMask {
+        if configuration.alignment == .center {
+            return [.layerMinXMinYCorner, .layerMaxXMinYCorner,
+                    .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+        }
+        return maskedCorners(for: configuration.direction)
     }
 
     /// Determines which corners to round based on the slide direction.
@@ -160,5 +185,37 @@ final class NavigatorTransitionAnimator: NSObject, UIViewControllerAnimatedTrans
         case .right:
             return [.layerMinXMinYCorner, .layerMinXMaxYCorner]
         }
+    }
+}
+
+// MARK: - Shadow Wrapper View
+
+/// A transparent container view that carries shadow and border properties,
+/// allowing the content view inside to use `clipsToBounds = true` for
+/// corner radius clipping without hiding the shadow.
+private final class ShadowWrapperView: UIView {
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        layer.shadowPath = UIBezierPath(
+            roundedRect: bounds,
+            cornerRadius: layer.cornerRadius
+        ).cgPath
+        updateBorderColor()
+    }
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
+            updateBorderColor()
+        }
+    }
+
+    func updateBorderColor() {
+        let isDark = traitCollection.userInterfaceStyle == .dark
+        let color: UIColor = isDark
+            ? UIColor.gray.withAlphaComponent(0.2)
+            : UIColor.black.withAlphaComponent(0.12)
+        layer.borderColor = color.cgColor
     }
 }
